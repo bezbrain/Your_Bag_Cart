@@ -13,35 +13,48 @@ const ACTIONS = {
 
 const defaultState = {
   product: data,
-  sum: 0,
   itemNumber: 0,
+  sum: 0,
 };
 
 const reducer = (currState, action) => {
   if (action.type === ACTIONS.CLEAR) {
-    return (currState = []);
+    return { ...currState, product: [] };
   } else if (action.type === ACTIONS.REMOVE) {
-    return currState.filter((each) => each.id !== action.payload.id);
+    return {
+      ...currState,
+      product: currState.product.filter(
+        (each) => each.id !== action.payload.id
+      ),
+    };
   } else if (action.type === ACTIONS.INCREASE_COUNT) {
-    return currState.map((each) => {
-      if (each.id === action.payload.id) {
-        return { ...each, count: each.count + 1 };
-      }
-      return each;
-    });
-  } else if (action.type === ACTIONS.DECREASE_COUNT) {
-    return currState.map((each) => {
-      if (each.id === action.payload.id) {
-        if (each.count === 0) {
-          return each.filter((each) => each.id !== action.payload.id);
+    return {
+      ...currState,
+      product: currState.product.map((each) => {
+        if (each.id === action.payload.id) {
+          return { ...each, count: each.count + 1 };
         }
-        return {
-          ...each,
-          count: each.count - 1,
-        };
-      }
-      return each;
-    });
+        return each;
+      }),
+    };
+  } else if (action.type === ACTIONS.DECREASE_COUNT) {
+    return {
+      ...currState,
+      product: currState.product
+        .map((each) => {
+          if (each.id === action.payload.id) {
+            if (each.count === 0) {
+              return null;
+            }
+            return {
+              ...each,
+              count: each.count - 1,
+            };
+          }
+          return each;
+        })
+        .filter((each) => each.count !== 0),
+    };
   }
 };
 
@@ -54,10 +67,19 @@ const Interface = () => {
   const [initState, dispatch] = useReducer(reducer, defaultState);
 
   // Dynamically sum the total amount
-  // const totalAmount = initState.reduce((acc, item) => {
-  //   let convert = Number(item.price);
-  //   return acc + convert;
-  // }, 0);
+  const sumTotal = initState.product
+    .map((each) => {
+      let convert = each.count * Number(each.price);
+      return (initState.sum = convert);
+    })
+    .reduce((acc, curr) => acc + curr, 0);
+
+  // Dynamically aggregating the cart number
+  const aggCount = initState.product
+    .map((each) => {
+      return (initState.itemNumber = each.count);
+    })
+    .reduce((acc, curr) => acc + curr, 0);
 
   // To clear cart
   const handleClear = () => {
@@ -73,9 +95,10 @@ const Interface = () => {
 
   // Clear all and bring out the statement "is currently empty" when the last remove btn is clicked
   useEffect(() => {
-    if (initState.length === 0) {
+    if (initState.product.length === 0) {
       setToggleFooter(false);
       setEmptiedCart(true);
+      // dispatch({ type: ACTIONS.CLEAR });
     }
   }, [initState]);
 
@@ -93,7 +116,7 @@ const Interface = () => {
         <div className="header-con">
           <h2>UseReducer</h2>
           <FaCartPlus className="cart" />
-          <div className="cart-count">{initState.itemNumber}</div>
+          <div className="cart-count">{aggCount}</div>
         </div>
       </header>
       <section className="body-section">
@@ -126,7 +149,7 @@ const Interface = () => {
         })}
 
         {toggleFooter && (
-          <Footer clearBtn={handleClear} total={initState.sum} />
+          <Footer clearBtn={handleClear} total={sumTotal.toFixed(2)} />
         )}
       </section>
     </>
